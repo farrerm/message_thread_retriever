@@ -21,7 +21,7 @@ public class DiscordMessageRetriever {
   private static String mainChannelId = ""; // put channel id here
   public static void main(String[] args) {
 
-    my_con = connection_class.connect_to_db("", "", "");  //db connection
+    my_con = ConnectionClass.connectToDB("", "", "");  //db connection
     
     //we can retrieve the channel id by accessing the channel in developer mode
     String channelId = ""; //to do
