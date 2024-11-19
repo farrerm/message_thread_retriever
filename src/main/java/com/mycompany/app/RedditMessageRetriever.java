@@ -38,7 +38,7 @@ public class RedditMessageRetriever {
     }
 
     public static void main (String[] args) {
-        Connection my_con = connection_class.connect_to_db("", "", ""); //to do
+        Connection my_con = ConnectionClass.connectToDB("", "", ""); //to do
         getThreads(my_con, "dataengineering"); //insert subreddits as desired
         getThreads(my_con, "python");
     }
@@ -71,20 +71,20 @@ public class RedditMessageRetriever {
                // System.out.println(thread_contents);
                 JSONArray thread_body = new JSONArray(thread_contents);
                 JSONObject first_message = thread_body.getJSONObject(0);
-                if !(first_message.has("data")){
+                if (!first_message.has("data")){
                     continue;
                 }
                 JSONObject data = first_message.getJSONObject("data");
-                if !(data.has("children")){
+                if (!data.has("children")){
                     continue;
                 }
                 JSONArray children = data.getJSONArray("children");
                 JSONObject first_child = children.getJSONObject(0);
-                if !(first_child.has("data")){
+                if (!first_child.has("data")){
                     continue;
                 }        
                 JSONObject first_child_data = first_child.getJSONObject("data");
-                if !(first_child_data.has("created_utc")){
+                if (!first_child_data.has("created_utc")){
                     continue;
                 }            
                 double timestamp = first_child_data.getDouble("created_utc");
@@ -92,31 +92,31 @@ public class RedditMessageRetriever {
                 //only consider threads that are less than 10 days old
                 if (current_time_long - timestamp_long < ten_days_in_seconds){
                     RedditMessageThread filtered_thread = new RedditMessageThread(thread_body);   
-                filtered_thread.computeTopicComplete();
-                // can limit search to topics of interest
-                if (filtered_thread.topic_complete.contains("Prefect")){
-                    filtered_thread.thread_id = first_child_data.getString("id");
-                    filtered_thread.subreddit = subredditName;
-                    filtered_thread.url = first_child_data.getString("url");
-                    filtered_thread.author = first_child_data.getString("author");
-                    filtered_thread.timestamp = first_child_data.getString("created_utc");
-                    filtered_thread.topic_summary = AzureOpenAI.topicSummary(filtered_thread.topic_complete);
-                    filtered_thread.sentiment = AzureOpenAI.sentimentAnalysis(filtered_thread.messagesToString());
-                    filtered_thread.is_open = AzureOpenAI.isTopicOpen(filtered_thread.topic_complete, filtered_thread.messagesToString());
-                
-                    all_threads_in_channel.add(filtered_thread);
-                    out_raw.write(prettyPrintJsonUsingDefaultPrettyPrinter(thread_body.toString()));
-                    out_raw.write("\n");
+                    filtered_thread.computeTopicComplete();
+                    // can limit search to topics of interest
+                    if (filtered_thread.topic_complete.contains("Prefect")){
+                        filtered_thread.thread_id = first_child_data.getString("id");
+                        filtered_thread.subreddit = subredditName;
+                        filtered_thread.url = first_child_data.getString("url");
+                        filtered_thread.author = first_child_data.getString("author");
+                        filtered_thread.timestamp = first_child_data.getString("created_utc");
+                        filtered_thread.topic_summary = AzureOpenAI.topicSummary(filtered_thread.topic_complete);
+                        filtered_thread.sentiment = AzureOpenAI.sentimentAnalysis(filtered_thread.messagesToString());
+                        filtered_thread.is_open = AzureOpenAI.isTopicOpen(filtered_thread.topic_complete, filtered_thread.messagesToString());
+                    
+                        all_threads_in_channel.add(filtered_thread);
+                        out_raw.write(prettyPrintJsonUsingDefaultPrettyPrinter(thread_body.toString()));
+                        out_raw.write("\n");
+                    }
                 }
+                else {
+                    break;
+                }
+                System.out.println(thread_ids.size());
+                System.out.println(all_threads_in_channel.size());
+                writeToDB(my_con, subredditName, all_threads_in_channel);
+                printToFile(all_threads_in_channel);
             }
-            else {
-                break;
-            }
-        
-            System.out.println(thread_ids.size());
-            System.out.println(all_threads_in_channel.size());
-            writeToDB(my_con, subredditName, all_threads_in_channel);
-            printToFile(all_threads_in_channel);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -125,7 +125,7 @@ public class RedditMessageRetriever {
        
         for (RedditMessageThread thread : all_threads_in_channel){
             System.out.println(thread.toString());
-            connection_class.insertRedditThread(my_con, "reddit_threads", thread.thread_id, subreddit, thread.author, thread.timestamp, thread.topic_summary, thread.url, thread.topic_complete, thread.sentiment, thread.is_open, thread.messages);
+            ConnectionClass.insertRedditThread(my_con, "reddit_threads", thread.thread_id, subreddit, thread.author, thread.timestamp, thread.topic_summary, thread.url, thread.topic_complete, thread.sentiment, thread.is_open, thread.messages);
         }
     }
     
@@ -143,7 +143,6 @@ public class RedditMessageRetriever {
             if (after != null) {
                 url += "&after=" + after;
             }
-
             Request request = new Request.Builder()
                 .url(url)
                 .header("Authorization", "Bearer " + accessToken)
